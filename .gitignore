@@ -47,3 +47,6 @@ start_train.sh
 start_train.sh
 
 *.sh
+
+content_net
+content_net/*

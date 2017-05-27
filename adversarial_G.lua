@@ -26,6 +26,7 @@ local function createModel()
 
     model=nn.Sequential()
     model:add(nn.SpatialConvolution(1,64,3,3,1,1,1,1))
+--    model:add(nn.SpatialConvolution(3,64,3,3,1,1,1,1))
     model:add(nn.ReLU())
     model:add(layer(15))
     model:add(nn.SpatialFullConvolution(64,64,3,3,2,2,1,1,1,1))
@@ -33,6 +34,7 @@ local function createModel()
     model:add(nn.SpatialFullConvolution(64,64,3,3,2,2,1,1,1,1))
     model:add(nn.ReLU())
     model:add(nn.SpatialFullConvolution(64,1,3,3,1,1,1,1))
+--    model:add(nn.SpatialFullConvolution(64,3,3,3,1,1,1,1))
     return model
 end
 
