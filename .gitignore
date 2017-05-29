@@ -50,3 +50,6 @@ start_train.sh
 
 content_net
 content_net/*
+
+models
+models/*

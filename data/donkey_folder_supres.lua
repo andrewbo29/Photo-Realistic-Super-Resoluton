@@ -10,6 +10,8 @@
 require 'image'
 paths.dofile('dataset.lua')
 
+ local t = require 'transforms'
+
 -- This file contains the data-loading logic and details.
 -- It is run by each data-loader thread.
 ------------------------------------------
@@ -34,10 +36,14 @@ local sampleSize = {1, opt.loadSize}
 local function loadImage(path)
    local input = image.load(path, 3, 'float')
    -- find the smaller dimension, and resize it to loadSize[2] (while keeping aspect ratio)
-   input=image.scale(input,loadSize[2],loadSize[2])
+--   input=image.scale(input,loadSize[2],loadSize[2])
 
    return input
 end
+
+ local preprocess = t.Compose {
+    t.RandomCrop(opt.loadSize)
+ }
 
 -- channel-wise mean and std. Calculate or load them from disk later in the script.
 local mean,std
@@ -47,13 +53,20 @@ local mean,std
 -- function to load the image, jitter it appropriately (random crops etc.)
 local trainHook = function(self, path)
    collectgarbage()
-   local input = loadImage(path)
-   local input_y=image.rgb2y(input)
-   
-   input=image.scale(input,opt.loadSize/4,opt.loadSize/4,'bicubic')
-   local input_y2=image.rgb2y(input)
-  
-   return input_y,input_y2
+   if opt.test == 'true' then
+      local input = loadImage(path)
+      local input_y=image.rgb2y(input)
+      return input_y, input_y
+   else
+      local input = loadImage(path)
+      input = preprocess(input)
+      local input_y=image.rgb2y(input)
+
+      input=image.scale(input,opt.loadSize/opt.scale,opt.loadSize/opt.scale,'bicubic')
+      local input_y2=image.rgb2y(input)
+
+      return input_y,input_y2
+   end
 end
 
 --------------------------------------

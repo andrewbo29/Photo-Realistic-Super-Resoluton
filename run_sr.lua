@@ -12,18 +12,20 @@ require 'content_loss'
 
 opt = {
   dataset = 'folder',
-  lr = 0.001,
+  lr = 0.01,
   beta1 = 0.9,  
   batchSize=32,
-  niter=250,
-  loadSize=96,
+  niter=30,
+  loadSize=256,
   ntrain = math.huge, 
   name='super_resolution',
   gpu=1,
   nThreads = 4,
   scale = 4,
   t_folder='',
-  model_folder=''
+  model_folder='',
+    content_loss='false',
+    test='false'
 }
 torch.manualSeed(1)
 
@@ -55,17 +57,13 @@ optimStateD = {
     weightDecay=0.0001,
 }
 
-local input = torch.Tensor(opt.batchSize, 1, opt.loadSize/4, opt.loadSize/4)
---local input = torch.Tensor(opt.batchSize, 3, opt.loadSize/4, opt.loadSize/4)
+local input = torch.Tensor(opt.batchSize, 1, opt.loadSize/opt.scale, opt.loadSize/opt.scale)
 local real_uncropped = torch.Tensor(opt.batchSize,1,opt.loadSize,opt.loadSize)
---local real_uncropped = torch.Tensor(opt.batchSize,3,opt.loadSize,opt.loadSize)
 local errD, errG
 local epoch_tm = torch.Timer()
 local tm = torch.Timer()
 local test = torch.Tensor(1, opt.loadSize, opt.loadSize)
---local test = torch.Tensor(3, opt.loadSize, opt.loadSize)
-local test2 = torch.Tensor(1, opt.loadSize/4, opt.loadSize/4)
---local test2 = torch.Tensor(3, opt.loadSize/4, opt.loadSize/4)
+local test2 = torch.Tensor(1, opt.loadSize/opt.scale, opt.loadSize/opt.scale)
 local label = torch.Tensor(opt.batchSize)
 
 if opt.gpu > 0 then
@@ -81,7 +79,10 @@ if opt.gpu > 0 then
    label=label:cuda()
 end
 
-local criterion_content = nn.ContentLoss()
+local criterion_content
+if opt.content_loss == 'true' then
+    criterion_content = nn.ContentLoss():cuda()
+end
 
 local parametersG, gradientsG = modelG:getParameters()
 local parametersD,gradientsD= modelD:getParameters()
@@ -94,7 +95,7 @@ local fDx=function(x)
 
     real_uncropped,input= data:getBatch()
     real_uncropped=real_uncropped:cuda()
-  
+
     label:fill(real_label)
     local output=modelD:forward(real_uncropped)
     local errD_real=criterion:forward(output,label)
@@ -122,18 +123,31 @@ local fGx=function(x)
     input=input:cuda()
 
     errG = criterion:forward(output, label)
---    errG_mse=criterion_mse:forward(fake,real_uncropped)
-    errG_content=criterion_content:forward(fake,real_uncropped)
+    if opt.content_loss == 'true' then
+        errG_content = criterion_content:updateOutput(fake,real_uncropped)
+        --    errG_content=criterion_content:forward(fake,real_uncropped)
+    else
+        errG_mse=criterion_mse:forward(fake,real_uncropped)
+    end
 
     local df_do = criterion:backward(output, label)
---    local df_do_mse=criterion_mse:backward(fake,real_uncropped)
-    local df_do_content=criterion_content:backward(fake,real_uncropped)
+    local df_do_content
+    local df_do_mse
+    if opt.content_loss == 'true' then
+        df_do_content=criterion_content:backward(fake,real_uncropped)
+    else
+        df_do_mse=criterion_mse:backward(fake,real_uncropped)
+    end
 
     local df_dg=modelD:updateGradInput(fake,df_do)
---    modelG:backward(input,0.001*df_dg+0.999*df_do_mse)
-    modelG:backward(input,df_dg+0.001*df_do_content)
---    err_all=0.001*errG+0.999*errG_mse
-    err_all=errG+0.001*errG_content
+    if opt.content_loss == 'true' then
+        modelG:backward(input,df_dg+0.001*df_do_content)
+        err_all=errG+0.001*errG_content
+    else
+        modelG:backward(input,0.001*df_dg+0.999*df_do_mse)
+        err_all=0.001*errG+0.999*errG_mse
+    end
+
     return err_all,gradientsG
 end
 

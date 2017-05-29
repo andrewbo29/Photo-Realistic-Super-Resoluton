@@ -107,7 +107,7 @@ function dataset:__init(...)
          classPaths[k] = {}
       end
    end
-  -- print('number of classes'..#self.classes)
+--   print('number of classes'..#self.classes)
 
    local function tableFind(t, o) for k,v in pairs(t) do if v == o then return k end end end
    -- loop over each paths folder, get list of unique class names,
@@ -229,7 +229,7 @@ function dataset:__init(...)
    local runningIndex = 0
    for i=1,#self.classes do
       if self.verbose then xlua.progress(i, #(self.classes)) end
-      print(classFindFiles[i])
+--      print(classFindFiles[i])
       local length = tonumber(sys.fexecute(wc .. " -l '"
                                               .. classFindFiles[i] .. "' |"
                                               .. cut .. " -f1 -d' '"))
@@ -330,12 +330,22 @@ local function tableToOutput(self, dataTable, dataTable2,scalarTable)
    local data, scalarLabels, labels, data2
    local quantity = #scalarTable
    assert(dataTable[1]:dim() == 3)
-   data = torch.Tensor(quantity,
-		       self.sampleSize[1], self.sampleSize[2], self.sampleSize[3])
-   data2 = torch.Tensor(quantity,
-           self.sampleSize[1], self.sampleSize[2]/4, self.sampleSize[3]/4)
+--   print(quantity, self.sampleSize[1], self.sampleSize[2], self.sampleSize[3])
+   if opt.test ~= 'true' then
+      data = torch.Tensor(quantity,
+                  self.sampleSize[1], self.sampleSize[2], self.sampleSize[3])
+      data2 = torch.Tensor(quantity,
+              self.sampleSize[1], self.sampleSize[2]/opt.scale, self.sampleSize[3]/opt.scale)
+   else
+      data = torch.Tensor(quantity,
+                  self.sampleSize[1], (#dataTable[1])[2], (#dataTable[1])[3])
+      data2 = torch.Tensor(quantity,
+              self.sampleSize[1], (#dataTable[1])[2], (#dataTable[1])[3])
+   end
    scalarLabels = torch.LongTensor(quantity):fill(-1111)
    for i=1,#dataTable do
+--      print(#data[i])
+--      print(#dataTable[i])
       data[i]:copy(dataTable[i])
       data2[i]:copy(dataTable2[i])
       scalarLabels[i] = scalarTable[i]
