@@ -19,7 +19,6 @@ opt = {
   t_folder='',
   model_file='models/modelssuper_resolution_adversarial_G_9',
   result_path='',
-  test_path='',
   test='true'
 }
 for k,v in pairs(opt) do opt[k] = tonumber(os.getenv(k)) or os.getenv(k) or opt[k] end
